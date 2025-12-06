@@ -1,1 +1,167 @@
+# -*- coding: utf-8 -*-
+# Расширенный прототип сценария для "Тени новой школы"
+define b = Character("Беатрис", color="#c080ff")
+define g = Character("Гильберт", color="#80b3ff")
+define d = Character("Дилан", color="#ff8080")
+define s = Character("Стефани", color="#ffb380")
+define m = Character("Миа", color="#ff99cc")
+define k = Character("Крис", color="#ffcc80")
+define e = Character("Ева", color="#a6e3a1")
+define a = Character("Анна Петровна", color="#ffd580")
 
+# Переменные эмоций
+default calmness = 80
+default vulnerability = 10
+default willpower = 50
+default gilbert_relation = 0
+default dilan_relation = 0
+
+init python:
+    def change_emotion(name, amount):
+        global calmness, vulnerability, willpower
+        if name == "calm": 
+            renpy.store.calmness = max(0, min(100, renpy.store.calmness + amount))
+        if name == "vul":
+            renpy.store.vulnerability = max(0, min(100, renpy.store.vulnerability + amount))
+        if name == "will":
+            renpy.store.willpower = max(0, min(100, renpy.store.willpower + amount))
+
+label start:
+    scene bg school_hall
+    show screen emotion_hud
+    b "Новый день. Я — Беатрис. Сегодня — первый день в новой школе."
+    "Телефон вибрирует."
+    show phone_popup
+    "На телефоне: сообщение от мамы: 'Удачи, любимая.'"
+    menu:
+        "Ответить 'Спасибо'":
+            "Вы отвечаете."
+            $ change_emotion("calm", 5)
+        "Игнорировать":
+            "Вы решаете не отвечать."
+            $ change_emotion("vul", 5)
+    jump scene_after_school
+
+label scene_after_school:
+    scene bg corridor_day
+    "После уроков четверо подходят к Беатрис."
+    s "Смотри, новая!"
+    m "Давай отберём сумку."
+    "Один из мальчиков хватает рюкзак. Смеются."
+    $ change_emotion("calm", -30)
+    $ change_emotion("vul", 20)
+    "Паника подкрадывается."
+    call panic_attack
+    "Вдруг появляется Гильберт и вмешивается."
+    g "Отойди от неё."
+    d "Ты что, заступился за её?"
+    "Гильберт ударяет Дилана и Криса."
+    $ gilbert_relation = gilbert_relation + 10
+    $ dilan_relation = dilan_relation - 10
+    menu:
+        "Спасибо...":
+            b "Спасибо..."
+            $ change_emotion("calm", 10)
+            $ gilbert_relation = gilbert_relation + 5
+        "Мне не нужна помощь.":
+            b "Мне не нужна помощь."
+            $ change_emotion("vul", 5)
+        "Почему ты вмешался?":
+            b "Почему ты вмешался?"
+            g "Потому что это неправильно."
+            $ change_emotion("will", 5)
+    jump director_scene
+
+label director_scene:
+    scene bg principal_office with fade
+    "В кабинет вызывают всех участников."
+    a "Я не могу, чтобы в классе были конфликты."
+    s "Она первая начала."
+    "Если игрок попросит проверить камеры:"
+    menu:
+        "Попросить проверить камеры.":
+            "Директор просит охранника проверить запись."
+            "Камера показывает нападение."
+            $ change_emotion("will", 5)
+            $ vulnerability = max(0, vulnerability - 10)
+        "Молчать.":
+            "Учителя склоняются к словам классной."
+            $ change_emotion("vul", 10)
+    jump phone_threat
+
+label phone_threat:
+    scene bg bedroom_night
+    "Ночью приходит сообщение от неизвестного: 'Не приходи завтра.'"
+    menu:
+        "Показать Гильберту":
+            "Вы шлёте скриншот."
+            $ change_emotion("calm", 5)
+        "Стереть":
+            "Вы удаляете сообщение."
+            $ change_emotion("vul", 10)
+    jump morning_gate
+
+label morning_gate:
+    scene bg school_gate
+    "У ворот шкoлы тревога усиливается."
+    if calmness < 30:
+        call panic_attack
+    "Кто-то подходит — это может быть Гильберт или Дилан в зависимости от отношений."
+    if gilbert_relation >= 10:
+        g "Я рядом. Я не дам, чтобы тебе было плохо."
+        $ change_emotion("calm", 15)
+    elif dilan_relation >= 10:
+        d "Я пришёл. Если кто-то тронет тебя — я разберусь."
+        $ change_emotion("calm", 10)
+        $ dilan_relation = dilan_relation + 5
+    else:
+        "Никто не подошёл вовремя. Вы держитесь как можете."
+        $ change_emotion("vul", 10)
+    jump school_event
+
+label school_event:
+    scene bg gym
+    "В спортзале может быть ловушка."
+    menu:
+        "Войти через главный вход (риск)":
+            "Вы входите."
+            if vulnerability > 50:
+                call panic_attack
+        "Обойти через задний двор (меньше риска)":
+            "Вы выбираете обход."
+            $ change_emotion("calm", 5)
+    "Сцена продолжается... (далее добавить ветки)"
+    return
+
+# Паническая атака - простая механика
+label panic_attack:
+    show screen panic_overlay
+    $ renpy.pause(0.6)
+    "Дыхание становится частым..."
+    $ change_emotion("calm", -20)
+    # Игрок выбирает действие при панике
+    menu:
+        "Дышать глубоко (нажать ритм)":
+            "Вы начинаете дыхательную технику."
+            $ change_emotion("calm", 15)
+            hide screen panic_overlay
+            return
+        "Достать телефон и посмотреть сообщение":
+            "Вы ищете опору в телефоне."
+            $ change_emotion("calm", 10)
+            hide screen panic_overlay
+            return
+        "Ничего не делать":
+            "Паника усиливается."
+            $ change_emotion("calm", -30)
+            if renpy.store.calmness <= 0:
+                "Вы едва не теряете сознание."
+                jump faint_scene
+            hide screen panic_overlay
+            return
+
+label faint_scene:
+    scene black with fade
+    "Вы потеряли сознание..."
+    # Ветка при обмороке
+    return
